@@ -7,14 +7,14 @@ function traduzir(error: { message: string; status?: number; code?: string; name
   if (error.code === 'otp_disabled' || /signups? not allowed|not found/i.test(error.message))
     return 'Não achamos uma assinatura com esse e-mail. Use o mesmo e-mail da compra.'
   if (error.status === 429 || /rate limit|after \d+ seconds/i.test(error.message))
-    return 'Você pediu um link há pouco. Espere 1 minuto e tente de novo.'
+    return 'Você pediu um código há pouco. Espere 1 minuto e tente de novo.'
   // Só é "sem internet" quando o aparelho está mesmo desconectado. Erro do servidor é outra coisa.
   if (typeof navigator !== 'undefined' && navigator.onLine === false)
     return 'Sem conexão com a internet. Confira e tente de novo.'
   if ((error.status ?? 0) >= 500 || error.name === 'AuthRetryableFetchError')
     return 'O envio está instável agora. Tente de novo em alguns minutos.'
   if (/invalid.*email|email.*invalid/i.test(error.message)) return 'Esse e-mail parece ter um erro de digitação.'
-  return 'Não consegui enviar o link agora. Tente de novo em instantes.'
+  return 'Não consegui enviar o código agora. Tente de novo em instantes.'
 }
 
 export default function Entrar() {
@@ -111,7 +111,7 @@ export default function Entrar() {
   return (
     <section className="cartao centro">
       <h1>Entre no seu Studio</h1>
-      <p>Use o e-mail da sua compra. Você recebe um link para entrar, sem senha.</p>
+      <p>Use o e-mail da sua compra. Você recebe um código de 6 números para entrar, sem senha.</p>
       <form onSubmit={enviar}>
         <label htmlFor="email">Seu e-mail</label>
         <input
@@ -128,7 +128,7 @@ export default function Entrar() {
         />
         {erro && <p className="erro" role="alert">{erro}</p>}
         <button className="botao" disabled={enviando}>
-          {enviando ? 'Enviando…' : 'Receber link de acesso'}
+          {enviando ? 'Enviando…' : 'Receber código de acesso'}
         </button>
       </form>
     </section>

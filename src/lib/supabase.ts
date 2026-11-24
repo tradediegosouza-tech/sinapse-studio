@@ -11,8 +11,8 @@ function lerErroDoLink(): string {
   if (!p.get('error') && !p.get('error_code')) return ''
   window.history.replaceState(null, '', window.location.pathname)
   return p.get('error_code') === 'otp_expired'
-    ? 'Esse link já foi usado ou venceu. Peça um novo aqui embaixo.'
-    : 'Não consegui entrar com esse link. Peça um novo aqui embaixo.'
+    ? 'Esse acesso já foi usado ou venceu. Peça um código novo aqui embaixo.'
+    : 'Não consegui entrar por esse e-mail. Peça um código novo aqui embaixo.'
 }
 export const erroDoLink = lerErroDoLink()
 
