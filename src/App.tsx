@@ -10,10 +10,11 @@ export default function App() {
 
   useEffect(() => {
     if (!configurado) return
-    supabase.auth.getSession().then(({ data }) => {
-      setSessao(data.session)
-      setCarregando(false)
-    })
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setSessao(data.session))
+      .catch(() => setSessao(null))
+      .finally(() => setCarregando(false))
     const { data } = supabase.auth.onAuthStateChange((_evento, s) => setSessao(s))
     return () => data.subscription.unsubscribe()
   }, [])

@@ -83,7 +83,8 @@ begin
           coalesce(p_creditos_por_mes, 10), p_renova_em)
   on conflict (id) do update
      set status = 'ativa',
-         plano = coalesce(excluded.plano, public.clientes.plano),
+         -- p_plano nulo (compra de créditos extras) NÃO rebaixa o plano de quem já tem um.
+         plano = coalesce(p_plano, public.clientes.plano),
          creditos_por_mes = coalesce(p_creditos_por_mes, public.clientes.creditos_por_mes),
          renova_em = coalesce(excluded.renova_em, public.clientes.renova_em);
 
@@ -159,16 +160,26 @@ begin
   if not found then raise exception 'Reel % não está em produção', p_id; end if;
 end $$;
 
--- Fábrica falhou: marca erro e DEVOLVE o crédito (1 vez só), a não ser que fosse um ajuste (ajuste não gastou crédito).
+-- Fábrica falhou.
+--  · Reel novo: marca erro e DEVOLVE o crédito (1 vez só).
+--  · Falha num AJUSTE: a cliente NÃO perde o vídeo que já tinha. Volta para 'pronto' com o vídeo anterior
+--    e o ajuste fica liberado de novo (ele não foi entregue). Não devolve crédito: o ajuste não gastou.
 create or replace function public.studio_reel_erro(p_id bigint, p_erro text) returns void
 language plpgsql security definer set search_path = public as $$
 declare r public.reels;
 begin
-  update public.reels set status = 'erro', erro = left(p_erro, 500), atualizado_em = now()
-   where id = p_id and status = 'produzindo' returning * into r;
+  select * into r from public.reels where id = p_id and status = 'produzindo' for update;
   if not found then raise exception 'Reel % não está em produção', p_id; end if;
-  if r.ajuste_pedido is null
-     and not exists (select 1 from public.creditos where origem = 'devolucao:reel:' || p_id) then
+
+  if r.ajuste_pedido is not null and r.video_url is not null then
+    update public.reels
+       set status = 'pronto', erro = left(p_erro, 500), ajuste_pedido = null, ajuste_em = null, atualizado_em = now()
+     where id = p_id;
+    return;
+  end if;
+
+  update public.reels set status = 'erro', erro = left(p_erro, 500), atualizado_em = now() where id = p_id;
+  if not exists (select 1 from public.creditos where origem = 'devolucao:reel:' || p_id) then
     insert into public.creditos (cliente_id, delta, motivo, origem)
     values (r.cliente_id, 1, 'Crédito devolvido: o Reel não pôde ser gerado', 'devolucao:reel:' || p_id);
   end if;
