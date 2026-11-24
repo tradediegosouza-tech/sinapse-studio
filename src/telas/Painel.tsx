@@ -114,6 +114,8 @@ export default function Painel({ email }: { email: string }) {
   const status = txt(cliente.status)
   const ativa = status === 'ativa'
   const renova = dataBR(txt(cliente.renova_em) || null)
+  // 1º acesso: sem nome e profissão o Reel sairia sem a identidade da profissional.
+  const perfilPronto = Boolean(txt(cliente.nome).trim() && txt(cliente.profissao).trim())
 
   return (
     <>
@@ -142,9 +144,11 @@ export default function Painel({ email }: { email: string }) {
         </section>
       )}
 
+      {!perfilPronto && <Perfil cliente={cliente} aoSalvar={carregar} primeiroAcesso />}
+
       <NovoReel
-        podeCriar={PRODUCAO_ATIVA && ativa && saldo > 0}
-        motivo={!PRODUCAO_ATIVA ? 'Criação de Reels desligada durante a ativação. Nenhum crédito é descontado.' : ativa ? 'Seus créditos deste mês acabaram.' : (SEM_CRIAR[status] ?? 'Sua assinatura precisa estar ativa para criar Reels.')}
+        podeCriar={PRODUCAO_ATIVA && ativa && saldo > 0 && perfilPronto}
+        motivo={!perfilPronto ? 'Antes do 1º Reel, preencha acima seu nome e sua profissão. Eles aparecem no vídeo.' : !PRODUCAO_ATIVA ? 'Criação de Reels desligada durante a ativação. Nenhum crédito é descontado.' : ativa ? 'Seus créditos deste mês acabaram.' : (SEM_CRIAR[status] ?? 'Sua assinatura precisa estar ativa para criar Reels.')}
         aoCriar={carregar}
       />
 
@@ -161,7 +165,7 @@ export default function Painel({ email }: { email: string }) {
         )}
       </section>
 
-      <Perfil cliente={cliente} aoSalvar={carregar} />
+      {perfilPronto && <Perfil cliente={cliente} aoSalvar={carregar} />}
 
       <section className="cartao">
         <h2>Precisa de ajuda?</h2>
@@ -415,7 +419,7 @@ function NovoReel({ podeCriar, motivo, aoCriar }: { podeCriar: boolean; motivo: 
   )
 }
 
-function Perfil({ cliente, aoSalvar }: { cliente: Linha; aoSalvar: () => Promise<void> }) {
+function Perfil({ cliente, aoSalvar, primeiroAcesso = false }: { cliente: Linha; aoSalvar: () => Promise<void>; primeiroAcesso?: boolean }) {
   const [nome, setNome] = useState(txt(cliente.nome))
   const [profissao, setProfissao] = useState(txt(cliente.profissao))
   const [registro, setRegistro] = useState(txt(cliente.registro))
@@ -431,6 +435,7 @@ function Perfil({ cliente, aoSalvar }: { cliente: Linha; aoSalvar: () => Promise
     setMsg('')
     setErro('')
     if (!nome.trim()) return setErro('Escreva o seu nome.')
+    if (primeiroAcesso && !profissao.trim()) return setErro('Escreva a sua profissão.')
     setSalvando(true)
     try {
       await salvarPerfil(cliente.id, { nome: nome.trim(), profissao: profissao.trim(), registro: registro.trim() })
@@ -449,19 +454,20 @@ function Perfil({ cliente, aoSalvar }: { cliente: Linha; aoSalvar: () => Promise
   }
 
   return (
-    <section className="cartao">
-      <h2>Como seu nome aparece no Reel</h2>
+    <section className={primeiroAcesso ? 'cartao destaque' : 'cartao'}>
+      <h2>{primeiroAcesso ? 'Bem-vinda! Primeiro, como seu nome aparece no Reel' : 'Como seu nome aparece no Reel'}</h2>
+      {primeiroAcesso && <p>Leva 30 segundos. Depois disso, o botão de criar o seu 1º Reel é liberado.</p>}
       <form onSubmit={salvar}>
         <label htmlFor="nome">Nome</label>
         <input id="nome" required maxLength={80} autoComplete="name" value={nome} onChange={campo(setNome)} />
         <label htmlFor="profissao">Profissão</label>
-        <input id="profissao" maxLength={60} placeholder="Ex.: Psicóloga" value={profissao} onChange={campo(setProfissao)} />
+        <input id="profissao" required={primeiroAcesso} maxLength={60} placeholder="Ex.: Psicóloga" value={profissao} onChange={campo(setProfissao)} />
         <label htmlFor="registro">Registro (se tiver)</label>
         <input id="registro" maxLength={40} placeholder="Ex.: CRP 06/000000" value={registro} onChange={campo(setRegistro)} />
         {erro && <p className="erro" role="alert">{erro}</p>}
         {msg && <p className="sucesso" role="status">{msg}</p>}
-        <button className="botao secundario" disabled={salvando || !mudou}>
-          {salvando ? 'Salvando…' : 'Salvar'}
+        <button className={primeiroAcesso ? 'botao' : 'botao secundario'} disabled={salvando || !mudou}>
+          {salvando ? 'Salvando…' : primeiroAcesso ? 'Salvar e liberar meu 1º Reel' : 'Salvar'}
         </button>
       </form>
     </section>
