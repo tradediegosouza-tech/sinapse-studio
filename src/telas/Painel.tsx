@@ -5,7 +5,15 @@ import {
   type Linha, type Reel,
 } from '../lib/dados'
 
-const TONS = ['Acolhedor', 'Didático', 'Direto', 'Inspirador']
+// Jeitos de falar inspirados nos arquétipos de marca (Mark e Pearson). O valor vai para a fábrica no campo "tom".
+const VOZES = [
+  { nome: 'Cuidadora', tom: 'acolhedor', frase: 'Acolhe quem está passando por isso, sem julgar.' },
+  { nome: 'Sábia', tom: 'didático', frase: 'Explica o tema com calma e clareza.' },
+  { nome: 'Gente como a gente', tom: 'simples e próximo', frase: 'Fala simples, com cenas do dia a dia.' },
+  { nome: 'Exploradora', tom: 'reflexivo', frase: 'Faz perguntas que convidam a pensar.' },
+  { nome: 'Heroína', tom: 'encorajador', frase: 'Dá coragem para o primeiro passo, sem prometer resultado.' },
+]
+const TONS = VOZES.map((v) => `${v.nome} (${v.tom})`)
 const OBJETIVOS = ['Explicar um tema', 'Desfazer um mito', 'Acolher quem passa por isso', 'Apresentar meu trabalho']
 const ROTULO: Record<string, string> = {
   na_fila: 'Na fila',
@@ -359,12 +367,13 @@ function NovoReel({ podeCriar, motivo, aoCriar }: { podeCriar: boolean; motivo: 
             <option key={o}>{o}</option>
           ))}
         </select>
-        <label htmlFor="tom">Tom</label>
+        <label htmlFor="tom">Jeito de falar</label>
         <select id="tom" value={tom} onChange={(e) => setTom(e.target.value)}>
           {TONS.map((t) => (
             <option key={t}>{t}</option>
           ))}
         </select>
+        <p className="pequeno">{VOZES[TONS.indexOf(tom)]?.frase}</p>
         <p className="pequeno">Formato: {FORMATO}, com o seu nome na tela.</p>
         {erro && <p className="erro" role="alert">{erro}</p>}
         {msg && <p className="sucesso" role="status">{msg}</p>}
