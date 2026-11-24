@@ -69,3 +69,5 @@ a.botao { color: #fff; }
 .aviso-ativacao { border-color: var(--roxo); background: var(--espera-fundo); }
 .aviso-ativacao p { margin-bottom: 6px; }
 .mt { margin-top: 18px; }
+.cartao.destaque { border: 2px solid var(--roxo); }
+.codigo { font-size: 1.6rem; letter-spacing: 0.4em; text-align: center; font-variant-numeric: tabular-nums; }
