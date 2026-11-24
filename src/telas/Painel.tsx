@@ -115,7 +115,10 @@ export default function Painel({ email }: { email: string }) {
   const ativa = status === 'ativa'
   const renova = dataBR(txt(cliente.renova_em) || null)
   // 1º acesso: sem nome e profissão o Reel sairia sem a identidade da profissional.
-  const perfilPronto = Boolean(txt(cliente.nome).trim() && txt(cliente.profissao).trim())
+  // Psicóloga: o CFP exige nome + CRP na divulgação, então o registro vira obrigatório.
+  const perfilPronto = Boolean(
+    txt(cliente.nome).trim() && txt(cliente.profissao).trim() && (!pedeRegistro(txt(cliente.profissao)) || txt(cliente.registro).trim()),
+  )
 
   return (
     <>
@@ -124,6 +127,12 @@ export default function Painel({ email }: { email: string }) {
           <p className="rotulo">Olá{txt(cliente.nome) ? `, ${txt(cliente.nome).split(' ')[0]}` : ''}</p>
           <p className="numero">{saldo}</p>
           <p>{saldo === 1 ? 'crédito disponível' : 'créditos disponíveis'} · 1 crédito = 1 Reel</p>
+          {perfilPronto && (
+            <p className="pequeno assinatura">
+              No vídeo: <b>{[txt(cliente.nome), txt(cliente.profissao), txt(cliente.registro)].filter((x) => x.trim()).join(' · ')}</b>{' '}
+              <a href="#perfil">Alterar</a>
+            </p>
+          )}
         </div>
         <div className="direita">
           <span className={`selo ${ativa ? 'ok' : 'alerta'}`}>{ASSINATURA[status] ?? 'Assinatura sem status'}</span>
@@ -148,7 +157,7 @@ export default function Painel({ email }: { email: string }) {
 
       <NovoReel
         podeCriar={PRODUCAO_ATIVA && ativa && saldo > 0 && perfilPronto}
-        motivo={!perfilPronto ? 'Antes do 1º Reel, preencha acima seu nome e sua profissão. Eles aparecem no vídeo.' : !PRODUCAO_ATIVA ? 'Criação de Reels desligada durante a ativação. Nenhum crédito é descontado.' : ativa ? 'Seus créditos deste mês acabaram.' : (SEM_CRIAR[status] ?? 'Sua assinatura precisa estar ativa para criar Reels.')}
+        motivo={!perfilPronto ? (pedeRegistro(txt(cliente.profissao)) && txt(cliente.nome).trim() ? 'Preencha acima o seu CRP. O conselho pede nome e registro em todo conteúdo, e ele aparece no vídeo.' : 'Antes do 1º Reel, preencha acima seu nome e sua profissão. Eles aparecem no vídeo.') : !PRODUCAO_ATIVA ? 'Criação de Reels desligada durante a ativação. Nenhum crédito é descontado.' : ativa ? 'Seus créditos deste mês acabaram.' : (SEM_CRIAR[status] ?? 'Sua assinatura precisa estar ativa para criar Reels.')}
         aoCriar={carregar}
       />
 
@@ -249,7 +258,11 @@ function ItemReel({ r, aoMudar }: { r: Reel; aoMudar: () => Promise<void> }) {
         <p className="pequeno">
           {!PRODUCAO_ATIVA
             ? 'Produção em ativação: seu pedido está guardado e entra na fila assim que a produção for ligada.'
-            : `${emAjuste ? 'Estamos refazendo com o seu ajuste.' : 'Estamos produzindo.'} Esta tela atualiza sozinha quando ficar pronto.`}
+            : emAjuste
+              ? 'Estamos refazendo com o seu ajuste. Esta tela atualiza sozinha quando ficar pronto.'
+              : r.status === 'na_fila'
+                ? 'Seu pedido está na fila: a produção começa em até 1 hora. Esta tela atualiza sozinha quando ficar pronto.'
+                : 'Estamos produzindo o seu Reel. Esta tela atualiza sozinha quando ficar pronto.'}
         </p>
       )}
 
@@ -258,7 +271,7 @@ function ItemReel({ r, aoMudar }: { r: Reel; aoMudar: () => Promise<void> }) {
           {/* Antes de aprovar é só prévia: sem o atalho de baixar do navegador. */}
           <video
             className="previa"
-            src={r.video_url!}
+            src={`${r.video_url!}#t=1.5`}
             controls
             playsInline
             preload="metadata"
@@ -341,7 +354,7 @@ function ItemReel({ r, aoMudar }: { r: Reel; aoMudar: () => Promise<void> }) {
           {!r.aprovado && !confirmando && !ajustando && (
             <p className="pequeno">
               {r.ajuste ? 'Este Reel já teve o ajuste incluído. ' : 'Você tem 1 ajuste por Reel. '}
-              Revise o conteúdo antes de aprovar: a publicação é sua.
+              Assista e leia a legenda com calma antes de aprovar: quem publica é você.
             </p>
           )}
         </>
@@ -357,18 +370,22 @@ function NovoReel({ podeCriar, motivo, aoCriar }: { podeCriar: boolean; motivo: 
   const [enviando, setEnviando] = useState(false)
   const [msg, setMsg] = useState('')
   const [erro, setErro] = useState('')
+  const [confirmar, setConfirmar] = useState(false)
   const curto = tema.trim().length < 5
 
+  // 1º toque só mostra o resumo; o crédito só é usado no "Confirmar e produzir" (evita tema digitado errado).
   async function criar(e: FormEvent) {
     e.preventDefault()
     if (enviando) return
     setErro('')
     setMsg('')
     if (curto) return setErro('Conte em poucas palavras sobre o que é o Reel.')
+    if (!confirmar) return setConfirmar(true)
     setEnviando(true)
     try {
       await pedirReel(tema.trim(), tom, objetivo)
       setTema('')
+      setConfirmar(false)
       setMsg('Pedido recebido. Seu Reel entrou na fila e aparece aqui embaixo quando ficar pronto.')
       await aoCriar()
     } catch (er) {
@@ -391,32 +408,53 @@ function NovoReel({ podeCriar, motivo, aoCriar }: { podeCriar: boolean; motivo: 
           rows={3}
           placeholder="Ex.: 3 sinais de que a ansiedade está pedindo atenção"
           value={tema}
-          onChange={(e) => { setTema(e.target.value); setMsg('') }}
+          onChange={(e) => { setTema(e.target.value); setMsg(''); setConfirmar(false) }}
         />
         <p className="pequeno contador">{tema.length}/{TEMA_MAX}</p>
-        <label htmlFor="objetivo">Objetivo do conteúdo</label>
-        <select id="objetivo" value={objetivo} onChange={(e) => setObjetivo(e.target.value)}>
+        <p className="rotulo-campo" id="rot-objetivo">Objetivo do conteúdo</p>
+        <div className="chips" role="radiogroup" aria-labelledby="rot-objetivo">
           {OBJETIVOS.map((o) => (
-            <option key={o}>{o}</option>
+            <button type="button" key={o} role="radio" aria-checked={objetivo === o} className={objetivo === o ? 'chip ativo' : 'chip'} onClick={() => { setObjetivo(o); setConfirmar(false) }}>
+              {o}
+            </button>
           ))}
-        </select>
-        <label htmlFor="tom">Jeito de falar</label>
-        <select id="tom" value={tom} onChange={(e) => setTom(e.target.value)}>
-          {TONS.map((t) => (
-            <option key={t}>{t}</option>
+        </div>
+        <p className="rotulo-campo" id="rot-tom">Jeito de falar</p>
+        <div className="chips" role="radiogroup" aria-labelledby="rot-tom">
+          {VOZES.map((v, i) => (
+            <button type="button" key={v.nome} role="radio" aria-checked={tom === TONS[i]} className={tom === TONS[i] ? 'chip ativo' : 'chip'} onClick={() => { setTom(TONS[i]); setConfirmar(false) }}>
+              {v.nome}
+            </button>
           ))}
-        </select>
+        </div>
         <p className="pequeno">{VOZES[TONS.indexOf(tom)]?.frase}</p>
         <p className="pequeno">Formato: {FORMATO}, com o seu nome na tela.</p>
         {erro && <p className="erro" role="alert">{erro}</p>}
         {msg && <p className="sucesso" role="status">{msg}</p>}
-        <button className="botao" disabled={!podeCriar || enviando}>
-          {enviando ? 'Enviando…' : 'Criar Reel (usa 1 crédito)'}
-        </button>
+        {confirmar && podeCriar ? (
+          <div className="confirmar" role="status">
+            <b>Confira antes de usar 1 crédito</b>
+            <p><span className="pequeno">Tema:</span> {tema.trim()}</p>
+            <p className="pequeno">{objetivo} · {tom}</p>
+            <p className="pequeno">Veja se o tema está escrito do jeito certo.</p>
+            <div className="acoes">
+              <button className="botao" disabled={enviando}>{enviando ? 'Enviando…' : 'Confirmar e produzir'}</button>
+              <button type="button" className="botao secundario" disabled={enviando} onClick={() => { setConfirmar(false); document.getElementById('tema')?.focus() }}>
+                Editar tema
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button className="botao" disabled={!podeCriar || enviando}>Criar Reel (usa 1 crédito)</button>
+        )}
         {!podeCriar && <p className="pequeno">{motivo}</p>}
       </form>
     </section>
   )
+}
+
+function pedeRegistro(profissao: string) {
+  return /psic[oó]log/i.test(profissao)
 }
 
 function Perfil({ cliente, aoSalvar, primeiroAcesso = false }: { cliente: Linha; aoSalvar: () => Promise<void>; primeiroAcesso?: boolean }) {
@@ -436,6 +474,7 @@ function Perfil({ cliente, aoSalvar, primeiroAcesso = false }: { cliente: Linha;
     setErro('')
     if (!nome.trim()) return setErro('Escreva o seu nome.')
     if (primeiroAcesso && !profissao.trim()) return setErro('Escreva a sua profissão.')
+    if (pedeRegistro(profissao) && !registro.trim()) return setErro('Escreva o seu CRP. Ele aparece no vídeo, como o conselho pede.')
     setSalvando(true)
     try {
       await salvarPerfil(cliente.id, { nome: nome.trim(), profissao: profissao.trim(), registro: registro.trim() })
@@ -454,7 +493,7 @@ function Perfil({ cliente, aoSalvar, primeiroAcesso = false }: { cliente: Linha;
   }
 
   return (
-    <section className={primeiroAcesso ? 'cartao destaque' : 'cartao'}>
+    <section id="perfil" className={primeiroAcesso ? 'cartao destaque' : 'cartao'}>
       <h2>{primeiroAcesso ? 'Bem-vinda! Primeiro, como seu nome aparece no Reel' : 'Como seu nome aparece no Reel'}</h2>
       {primeiroAcesso && <p>Leva 30 segundos. Depois disso, o botão de criar o seu 1º Reel é liberado.</p>}
       <form onSubmit={salvar}>
@@ -462,8 +501,8 @@ function Perfil({ cliente, aoSalvar, primeiroAcesso = false }: { cliente: Linha;
         <input id="nome" required maxLength={80} autoComplete="name" value={nome} onChange={campo(setNome)} />
         <label htmlFor="profissao">Profissão</label>
         <input id="profissao" required={primeiroAcesso} maxLength={60} placeholder="Ex.: Psicóloga" value={profissao} onChange={campo(setProfissao)} />
-        <label htmlFor="registro">Registro (se tiver)</label>
-        <input id="registro" maxLength={40} placeholder="Ex.: CRP 06/000000" value={registro} onChange={campo(setRegistro)} />
+        <label htmlFor="registro">{pedeRegistro(profissao) ? 'Registro (CRP)' : 'Registro (se tiver)'}</label>
+        <input id="registro" required={pedeRegistro(profissao)} maxLength={40} placeholder="Ex.: CRP 06/000000" value={registro} onChange={campo(setRegistro)} />
         {erro && <p className="erro" role="alert">{erro}</p>}
         {msg && <p className="sucesso" role="status">{msg}</p>}
         <button className={primeiroAcesso ? 'botao' : 'botao secundario'} disabled={salvando || !mudou}>
