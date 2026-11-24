@@ -8,8 +8,11 @@ function traduzir(error: { message: string; status?: number; code?: string; name
     return 'Não achamos uma assinatura com esse e-mail. Use o mesmo e-mail da compra.'
   if (error.status === 429 || /rate limit|after \d+ seconds/i.test(error.message))
     return 'Você pediu um link há pouco. Espere 1 minuto e tente de novo.'
-  if (error.name === 'AuthRetryableFetchError' || !error.status || /fetch/i.test(error.message))
+  // Só é "sem internet" quando o aparelho está mesmo desconectado. Erro do servidor é outra coisa.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false)
     return 'Sem conexão com a internet. Confira e tente de novo.'
+  if ((error.status ?? 0) >= 500 || error.name === 'AuthRetryableFetchError')
+    return 'O envio está instável agora. Tente de novo em alguns minutos.'
   if (/invalid.*email|email.*invalid/i.test(error.message)) return 'Esse e-mail parece ter um erro de digitação.'
   return 'Não consegui enviar o link agora. Tente de novo em instantes.'
 }
@@ -20,6 +23,8 @@ export default function Entrar() {
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState(erroDoLink)
   const [espera, setEspera] = useState(0)
+  const [codigo, setCodigo] = useState('')
+  const [conferindo, setConferindo] = useState(false)
 
   useEffect(() => {
     if (espera <= 0) return
@@ -51,18 +56,47 @@ export default function Entrar() {
     pedirLink()
   }
 
+  // Código de 6 números do mesmo e-mail: entra na mesma tela, sem depender de onde o link abre.
+  async function entrarComCodigo(e: FormEvent) {
+    e.preventDefault()
+    const token = codigo.replace(/\D/g, '')
+    if (token.length < 6) return setErro('Digite os números do código que chegou no e-mail.')
+    setErro('')
+    setConferindo(true)
+    const { error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token, type: 'email' })
+    setConferindo(false)
+    if (error)
+      setErro(/expired|invalid/i.test(error.message)
+        ? 'Esse código não vale mais ou está errado. Use o código do e-mail mais novo.'
+        : traduzir(error))
+  }
+
   if (tela === 'enviado')
     return (
       <section className="cartao centro">
         <h1>Olhe o seu e-mail</h1>
         <p>
-          Enviamos um link para <b>{email.trim().toLowerCase()}</b>. Toque nele para entrar. Não precisa de senha.
+          Enviamos para <b>{email.trim().toLowerCase()}</b> um código e um botão de entrada. Use o que for mais fácil.
         </p>
+        <form onSubmit={entrarComCodigo}>
+          <label htmlFor="codigo">Código do e-mail</label>
+          <input
+            id="codigo"
+            className="codigo"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={10}
+            placeholder="000000"
+            value={codigo}
+            onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))}
+          />
+          {erro && <p className="erro" role="alert">{erro}</p>}
+          <button className="botao" disabled={conferindo}>{conferindo ? 'Entrando…' : 'Entrar'}</button>
+        </form>
         <p className="pequeno">
-          Pode levar 1 ou 2 minutos. Se não achar, olhe a caixa de spam ou promoções. O link vale por pouco tempo e só
-          funciona uma vez.
+          Pode levar 1 ou 2 minutos. Se não achar, olhe a caixa de spam ou promoções. Pediu de novo? Use sempre o
+          e-mail mais novo.
         </p>
-        {erro && <p className="erro" role="alert">{erro}</p>}
         <button className="botao secundario" disabled={espera > 0 || enviando} onClick={pedirLink}>
           {enviando ? 'Enviando…' : espera > 0 ? `Enviar de novo em ${espera} s` : 'Enviar de novo'}
         </button>
