@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
-  lerCliente, lerReels, lerSaldo, mensagemDeErro, pedirReel, salvarPerfil,
+  aprovarReel, FORMATO, lerCliente, lerReels, lerSaldo, mensagemDeErro, pedirAjuste, pedirReel, salvarPerfil,
   type Linha, type Reel,
 } from '../lib/dados'
 
 const TONS = ['Acolhedor', 'Didático', 'Direto', 'Inspirador']
+const OBJETIVOS = ['Explicar um tema', 'Desfazer um mito', 'Acolher quem passa por isso', 'Apresentar meu trabalho']
 const ROTULO: Record<string, string> = {
   na_fila: 'Na fila',
   produzindo: 'Produzindo',
@@ -93,24 +94,7 @@ export default function Painel({ email }: { email: string }) {
         ) : (
           <ul className="lista">
             {reels.map((r) => (
-              <li key={r.id}>
-                <div>
-                  <b>{r.tema}</b>
-                  <p className="pequeno">
-                    {r.tom}
-                    {r.criado ? ` · ${new Date(r.criado).toLocaleDateString('pt-BR')}` : ''}
-                  </p>
-                </div>
-                {r.status === 'pronto' && r.video_url ? (
-                  <a className="botao pequeno-botao" href={r.video_url} target="_blank" rel="noreferrer" download>
-                    Ver e baixar
-                  </a>
-                ) : (
-                  <span className={`selo ${r.status === 'erro' ? 'alerta' : 'espera'}`}>
-                    {ROTULO[r.status] ?? r.status}
-                  </span>
-                )}
-              </li>
+              <ItemReel key={r.id} r={r} aoMudar={carregar} />
             ))}
           </ul>
         )}
@@ -121,9 +105,99 @@ export default function Painel({ email }: { email: string }) {
   )
 }
 
+function ItemReel({ r, aoMudar }: { r: Reel; aoMudar: () => void }) {
+  const [ajustando, setAjustando] = useState(false)
+  const [texto, setTexto] = useState('')
+  const [erro, setErro] = useState('')
+  const [copiado, setCopiado] = useState(false)
+  const pronto = r.status === 'pronto' && r.video_url
+
+  async function agir(acao: () => Promise<void>) {
+    setErro('')
+    try {
+      await acao()
+      setAjustando(false)
+      aoMudar()
+    } catch (e) {
+      setErro(mensagemDeErro(e))
+    }
+  }
+
+  return (
+    <li className="reel">
+      <div className="cabeca">
+        <div>
+          <b>{r.tema}</b>
+          <p className="pequeno">
+            {[r.objetivo, r.tom, r.criado && new Date(r.criado).toLocaleDateString('pt-BR')].filter(Boolean).join(' · ')}
+          </p>
+        </div>
+        <span className={`selo ${r.status === 'erro' ? 'alerta' : r.aprovado ? 'ok' : 'espera'}`}>
+          {r.aprovado ? 'Aprovado' : pronto ? 'Para revisar' : r.ajuste && r.status !== 'erro' ? 'Em ajuste' : (ROTULO[r.status] ?? r.status)}
+        </span>
+      </div>
+
+      {r.status === 'erro' && (
+        <p className="pequeno">Não conseguimos gerar este Reel. O crédito voltou para o seu saldo.</p>
+      )}
+
+      {pronto && (
+        <>
+          <video className="previa" src={r.video_url!} controls playsInline preload="metadata" />
+          {r.legenda && (
+            <div className="legenda">
+              <p>{r.legenda}</p>
+              <button
+                className="link"
+                onClick={() => navigator.clipboard.writeText(r.legenda).then(() => setCopiado(true))}
+              >
+                {copiado ? 'Legenda copiada' : 'Copiar legenda'}
+              </button>
+            </div>
+          )}
+          {erro && <p className="erro">{erro}</p>}
+          {r.aprovado ? (
+            <a className="botao" href={r.video_url!} target="_blank" rel="noreferrer" download>
+              Baixar vídeo
+            </a>
+          ) : ajustando ? (
+            <form
+              onSubmit={(e: FormEvent) => {
+                e.preventDefault()
+                agir(() => pedirAjuste(r.id, texto))
+              }}
+            >
+              <label htmlFor={`aj${r.id}`}>O que você quer ajustar?</label>
+              <textarea id={`aj${r.id}`} required minLength={5} maxLength={500} rows={3} value={texto} onChange={(e) => setTexto(e.target.value)} />
+              <div className="acoes">
+                <button className="botao">Enviar ajuste</button>
+                <button type="button" className="botao secundario" onClick={() => setAjustando(false)}>Voltar</button>
+              </div>
+            </form>
+          ) : (
+            <div className="acoes">
+              <button className="botao" onClick={() => agir(() => aprovarReel(r.id))}>Aprovar</button>
+              {!r.ajuste && (
+                <button className="botao secundario" onClick={() => setAjustando(true)}>Pedir ajuste</button>
+              )}
+            </div>
+          )}
+          {!r.aprovado && (
+            <p className="pequeno">
+              {r.ajuste ? 'Este Reel já teve o ajuste incluído. ' : 'Você tem 1 ajuste por Reel. '}
+              Revise o conteúdo antes de aprovar: a publicação é sua.
+            </p>
+          )}
+        </>
+      )}
+    </li>
+  )
+}
+
 function NovoReel({ podeCriar, ativa, aoCriar }: { podeCriar: boolean; ativa: boolean; aoCriar: () => void }) {
   const [tema, setTema] = useState('')
   const [tom, setTom] = useState(TONS[0])
+  const [objetivo, setObjetivo] = useState(OBJETIVOS[0])
   const [enviando, setEnviando] = useState(false)
   const [msg, setMsg] = useState('')
   const [erro, setErro] = useState('')
@@ -134,7 +208,7 @@ function NovoReel({ podeCriar, ativa, aoCriar }: { podeCriar: boolean; ativa: bo
     setMsg('')
     setEnviando(true)
     try {
-      await pedirReel(tema.trim(), tom)
+      await pedirReel(tema.trim(), tom, objetivo)
       setTema('')
       setMsg('Pedido recebido. Seu Reel entrou na fila.')
       aoCriar()
@@ -160,12 +234,19 @@ function NovoReel({ podeCriar, ativa, aoCriar }: { podeCriar: boolean; ativa: bo
           value={tema}
           onChange={(e) => setTema(e.target.value)}
         />
+        <label htmlFor="objetivo">Objetivo do conteúdo</label>
+        <select id="objetivo" value={objetivo} onChange={(e) => setObjetivo(e.target.value)}>
+          {OBJETIVOS.map((o) => (
+            <option key={o}>{o}</option>
+          ))}
+        </select>
         <label htmlFor="tom">Tom</label>
         <select id="tom" value={tom} onChange={(e) => setTom(e.target.value)}>
           {TONS.map((t) => (
             <option key={t}>{t}</option>
           ))}
         </select>
+        <p className="pequeno">Formato: {FORMATO}, com o seu nome na tela.</p>
         {erro && <p className="erro">{erro}</p>}
         {msg && <p className="sucesso">{msg}</p>}
         <button className="botao" disabled={!podeCriar || enviando}>

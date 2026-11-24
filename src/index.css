@@ -54,3 +54,10 @@ input:focus, textarea:focus, select:focus, button:focus-visible, a:focus-visible
 .lista li:first-child { border-top: 0; }
 .lista b { overflow-wrap: anywhere; }
 .rodape { text-align: center; color: var(--suave); font-size: 0.8rem; margin-top: 24px; }
+.lista li.reel { display: block; }
+.cabeca { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.previa { display: block; width: 100%; max-width: 260px; aspect-ratio: 9 / 16; margin: 12px auto 0; border-radius: 12px; background: #000; }
+.legenda { margin-top: 12px; padding: 12px; background: var(--fundo); border: 1px solid var(--borda); border-radius: 10px; font-size: 0.9rem; }
+.legenda p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.acoes { display: flex; gap: 10px; }
+.acoes .botao { margin-top: 12px; }
