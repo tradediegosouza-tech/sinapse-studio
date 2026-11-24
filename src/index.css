@@ -66,3 +66,6 @@ input:focus, textarea:focus, select:focus, button:focus-visible, a:focus-visible
 .acoes .botao { flex: 1; }
 a { color: var(--roxo); }
 a.botao { color: #fff; }
+.aviso-ativacao { border-color: var(--roxo); background: var(--espera-fundo); }
+.aviso-ativacao p { margin-bottom: 6px; }
+.mt { margin-top: 18px; }

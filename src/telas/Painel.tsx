@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { EMAIL_SUPORTE, LINK_COMPRAR_CREDITOS, PRODUCAO_ATIVA } from '../lib/config'
 import {
   aprovarReel, baixarVideo, copiarTexto, dataBR, FORMATO, lerCliente, lerReels, lerSaldo, mensagemDeErro,
   pedirAjuste, pedirReel, salvarPerfil,
@@ -130,9 +131,20 @@ export default function Painel({ email }: { email: string }) {
 
       {erro && <p className="erro" role="alert">{erro}</p>}
 
+      {!PRODUCAO_ATIVA && (
+        <section className="cartao aviso-ativacao" role="status">
+          <h2>Produção em ativação</h2>
+          <p>
+            Estamos ligando a produção dos Reels. Enquanto isso, o botão de criar fica desligado e
+            <b> nenhum crédito é descontado</b>. Seus créditos continuam guardados.
+          </p>
+          <p className="pequeno">Avisamos por e-mail assim que a produção estiver liberada.</p>
+        </section>
+      )}
+
       <NovoReel
-        podeCriar={ativa && saldo > 0}
-        motivo={ativa ? 'Seus créditos deste mês acabaram.' : (SEM_CRIAR[status] ?? 'Sua assinatura precisa estar ativa para criar Reels.')}
+        podeCriar={PRODUCAO_ATIVA && ativa && saldo > 0}
+        motivo={!PRODUCAO_ATIVA ? 'Criação de Reels desligada durante a ativação. Nenhum crédito é descontado.' : ativa ? 'Seus créditos deste mês acabaram.' : (SEM_CRIAR[status] ?? 'Sua assinatura precisa estar ativa para criar Reels.')}
         aoCriar={carregar}
       />
 
@@ -150,6 +162,22 @@ export default function Painel({ email }: { email: string }) {
       </section>
 
       <Perfil cliente={cliente} aoSalvar={carregar} />
+
+      <section className="cartao">
+        <h2>Precisa de ajuda?</h2>
+        <p>
+          Fale com a gente pelo e-mail{' '}
+          <a href={`mailto:${EMAIL_SUPORTE}?subject=${encodeURIComponent('Ajuda com o Sinapse Studio')}`}>{EMAIL_SUPORTE}</a>.
+        </p>
+        <h2 className="mt">Mais créditos</h2>
+        {LINK_COMPRAR_CREDITOS ? (
+          <a className="botao secundario" href={LINK_COMPRAR_CREDITOS} target="_blank" rel="noreferrer">
+            Comprar +10 créditos
+          </a>
+        ) : (
+          <p className="pequeno">A compra de créditos extras está em ativação. Se precisar antes, fale com o suporte.</p>
+        )}
+      </section>
     </>
   )
 }
@@ -215,8 +243,9 @@ function ItemReel({ r, aoMudar }: { r: Reel; aoMudar: () => Promise<void> }) {
       )}
       {(r.status === 'na_fila' || r.status === 'produzindo') && (
         <p className="pequeno">
-          {emAjuste ? 'Estamos refazendo com o seu ajuste.' : 'Estamos produzindo.'} Esta tela atualiza sozinha quando
-          ficar pronto.
+          {!PRODUCAO_ATIVA
+            ? 'Produção em ativação: seu pedido está guardado e entra na fila assim que a produção for ligada.'
+            : `${emAjuste ? 'Estamos refazendo com o seu ajuste.' : 'Estamos produzindo.'} Esta tela atualiza sozinha quando ficar pronto.`}
         </p>
       )}
 
@@ -300,7 +329,7 @@ function ItemReel({ r, aoMudar }: { r: Reel; aoMudar: () => Promise<void> }) {
           ) : (
             <div className="acoes">
               <button className="botao" onClick={() => setConfirmando(true)}>Aprovar</button>
-              {!r.ajuste && (
+              {!r.ajuste && PRODUCAO_ATIVA && (
                 <button className="botao secundario" onClick={() => setAjustando(true)}>Pedir ajuste</button>
               )}
             </div>
