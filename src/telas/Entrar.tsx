@@ -12,10 +12,18 @@ export default function Entrar() {
     setEstado('enviando')
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
-      options: { emailRedirectTo: window.location.origin + window.location.pathname },
+      options: {
+        // Só entra quem já é cliente: o cadastro nasce no pagamento.
+        shouldCreateUser: false,
+        emailRedirectTo: window.location.origin + window.location.pathname,
+      },
     })
     if (error) {
-      setErro('Não consegui enviar o link. Confira o e-mail e tente de novo.')
+      setErro(
+        /signups? not allowed|not found/i.test(error.message)
+          ? 'Não achamos uma assinatura com esse e-mail. Use o mesmo e-mail da compra.'
+          : 'Não consegui enviar o link. Confira o e-mail e tente de novo.',
+      )
       setEstado('parado')
     } else setEstado('enviado')
   }

@@ -43,7 +43,7 @@ export async function lerReels(): Promise<Reel[]> {
 
 // Confere assinatura e saldo e gasta 1 crédito, tudo dentro do banco.
 export async function pedirReel(tema: string, tom: string) {
-  const { error } = await supabase.rpc('pedir_reel', { tema, tom })
+  const { error } = await supabase.rpc('pedir_reel', { p_tema: tema, p_tom: tom })
   if (error) throw error
 }
 
