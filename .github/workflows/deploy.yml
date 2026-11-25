@@ -27,6 +27,8 @@ jobs:
       - run: npm run build
         env:
           VITE_SUPABASE_URL: https://zjsqtzqrwdktdcsinbcs.supabase.co
+          # Domínio próprio studio.aisinapse.com.br (25/11): app servido na raiz
+          VITE_BASE: /
           # Variável do repositório (Settings › Secrets and variables › Actions › Variables)
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
       - uses: actions/upload-pages-artifact@v3
