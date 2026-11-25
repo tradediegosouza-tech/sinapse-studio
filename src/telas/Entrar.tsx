@@ -86,7 +86,7 @@ export default function Entrar() {
             inputMode="numeric"
             autoComplete="one-time-code"
             maxLength={10}
-            placeholder="000000"
+            placeholder="Código do e-mail"
             value={codigo}
             onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ''))}
           />
@@ -111,7 +111,7 @@ export default function Entrar() {
   return (
     <section className="cartao centro">
       <h1>Entre no seu Studio</h1>
-      <p>Use o e-mail da sua compra. Você recebe um código de 6 números para entrar, sem senha.</p>
+      <p>Use o e-mail da sua compra. Você recebe um código de acesso no e-mail para entrar, sem senha.</p>
       <form onSubmit={enviar}>
         <label htmlFor="email">Seu e-mail</label>
         <input
