@@ -164,7 +164,7 @@ export default function Painel({ email }: { email: string }) {
       <section className="cartao">
         <h2>Seus Reels</h2>
         {reels.length === 0 ? (
-          <p className="aviso">Você ainda não criou nenhum Reel.</p>
+          <p className="aviso"><b>Pronta para o seu 1º Reel?</b> Escreva o tema ali em cima. Aqui só aparecem os Reels que você pedir.</p>
         ) : (
           <ul className="lista">
             {reels.map((r) => (
