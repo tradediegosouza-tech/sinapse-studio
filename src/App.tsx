@@ -22,7 +22,7 @@ export default function App() {
   return (
     <div className="pagina">
       <header className="topo">
-        <span className="marca">Sinapse <b>Studio</b></span>
+        <span className="marca"><span className="logo" aria-hidden="true" />Sinapse Studio</span>
         {sessao && (
           <button className="link" onClick={() => supabase.auth.signOut()}>
             Sair

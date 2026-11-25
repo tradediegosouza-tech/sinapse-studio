@@ -134,21 +134,19 @@ export default function Painel({ email }: { email: string }) {
   return (
     <>
       <section className="cartao saldo">
-        <div>
-          <p className="rotulo">Olá{txt(cliente.nome) ? `, ${txt(cliente.nome).split(' ')[0]}` : ''}</p>
-          <p className="numero">{saldo}</p>
-          <p>{saldo === 1 ? 'crédito disponível' : 'créditos disponíveis'} · 1 crédito = 1 Reel</p>
-          {perfilPronto && (
-            <p className="pequeno assinatura">
-              No vídeo: <b>{[txt(cliente.nome), txt(cliente.profissao), txt(cliente.registro)].filter((x) => x.trim()).join(' · ')}</b>{' '}
-              <a href="#perfil" onClick={() => setAba('criar')}>Alterar</a>
-            </p>
-          )}
-        </div>
-        <div className="direita">
+        <p className="rotulo">Olá{txt(cliente.nome) ? `, ${txt(cliente.nome).split(' ')[0]}` : ''}</p>
+        <p className="credito"><span className="numero">{saldo}</span> {saldo === 1 ? 'crédito' : 'créditos'}</p>
+        <p className="pequeno">1 crédito = 1 Reel</p>
+        <p className="linha-selo">
           <span className={`selo ${ativa ? 'ok' : 'alerta'}`}>{ASSINATURA[status] ?? 'Assinatura sem status'}</span>
-          {renova && ativa && <p className="pequeno">Renova em {renova}</p>}
-        </div>
+          {renova && ativa && <span className="pequeno">Renova em {renova}</span>}
+        </p>
+        {perfilPronto && (
+          <p className="assinatura">
+            <span className="pequeno">No vídeo:</span> {[txt(cliente.nome), txt(cliente.profissao), txt(cliente.registro)].filter((x) => x.trim()).join(' · ')}{' '}
+            <a href="#perfil" onClick={() => setAba('criar')}>Alterar</a>
+          </p>
+        )}
       </section>
 
       {erro && <p className="erro" role="alert">{erro}</p>}
