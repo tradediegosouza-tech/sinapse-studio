@@ -197,9 +197,15 @@ export default function Painel({ email }: { email: string }) {
         </p>
         <h2 className="mt">Mais créditos</h2>
         {LINK_COMPRAR_CREDITOS ? (
-          <a className="botao secundario" href={LINK_COMPRAR_CREDITOS} target="_blank" rel="noreferrer">
-            Comprar +10 créditos
-          </a>
+          <>
+            <a className="botao secundario" href={LINK_COMPRAR_CREDITOS} target="_blank" rel="noreferrer">
+              Comprar +10 créditos · R$ 37
+            </a>
+            <p className="pequeno">
+              Pague com o mesmo e-mail da sua conta (<b>{email}</b>). Os
+              créditos caem aqui sozinhos em poucos minutos.
+            </p>
+          </>
         ) : (
           <p className="pequeno">A compra de créditos extras está em ativação. Se precisar antes, fale com o suporte.</p>
         )}

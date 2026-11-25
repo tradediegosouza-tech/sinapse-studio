@@ -7,4 +7,4 @@ export const PRODUCAO_ATIVA = true
 export const EMAIL_SUPORTE = 'contato@aisinapse.com.br'
 
 // Link do checkout da Cakto para créditos extras. Vazio = compra ainda em ativação (produto inativo).
-export const LINK_COMPRAR_CREDITOS = ''
+export const LINK_COMPRAR_CREDITOS = 'https://pay.cakto.com.br/37b9qxg'
