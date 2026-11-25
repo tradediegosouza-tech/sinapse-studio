@@ -15,6 +15,13 @@ const VOZES = [
   { nome: 'Heroína', tom: 'encorajador', frase: 'Dá coragem para o primeiro passo, sem prometer resultado.' },
 ]
 const TONS = VOZES.map((v) => `${v.nome} (${v.tom})`)
+// Ideias prontas de tema (toque e edite). Só informam e acolhem: nada de promessa de resultado.
+const SUGESTOES = [
+  '3 sinais de que a ansiedade está pedindo atenção',
+  'Terapia não é só para quem está em crise',
+  'O que esperar da primeira sessão',
+  'Como saber a hora de procurar ajuda',
+]
 const OBJETIVOS = ['Explicar um tema', 'Desfazer um mito', 'Acolher quem passa por isso', 'Apresentar meu trabalho']
 const ROTULO: Record<string, string> = {
   na_fila: 'Na fila',
@@ -42,6 +49,8 @@ export default function Painel({ email }: { email: string }) {
   const [reels, setReels] = useState<Reel[]>([])
   // 'falhou' = nunca conseguiu ler. Não é o mesmo que "não é cliente".
   const [estado, setEstado] = useState<'carregando' | 'ok' | 'falhou'>('carregando')
+  // Duas abas (como nos apps de vídeo): criar fica separado dos Reels pedidos.
+  const [aba, setAba] = useState<'criar' | 'reels'>('criar')
   const [erro, setErro] = useState('')
 
   const carregar = useCallback(async () => {
@@ -84,6 +93,8 @@ export default function Painel({ email }: { email: string }) {
     }, 15000)
     return () => clearInterval(t)
   }, [emProducao, carregar])
+
+  const paraRevisar = reels.filter((r) => r.status === 'pronto' && r.video_url && !r.aprovado).length
 
   if (estado === 'carregando') return <p className="aviso">Carregando…</p>
 
@@ -130,7 +141,7 @@ export default function Painel({ email }: { email: string }) {
           {perfilPronto && (
             <p className="pequeno assinatura">
               No vídeo: <b>{[txt(cliente.nome), txt(cliente.profissao), txt(cliente.registro)].filter((x) => x.trim()).join(' · ')}</b>{' '}
-              <a href="#perfil">Alterar</a>
+              <a href="#perfil" onClick={() => setAba('criar')}>Alterar</a>
             </p>
           )}
         </div>
@@ -153,18 +164,22 @@ export default function Painel({ email }: { email: string }) {
         </section>
       )}
 
-      {!perfilPronto && <Perfil cliente={cliente} aoSalvar={carregar} primeiroAcesso />}
+      {aba === 'criar' && !perfilPronto && <Perfil cliente={cliente} aoSalvar={carregar} primeiroAcesso />}
 
-      <NovoReel
+      {aba === 'criar' && <NovoReel
+        sugestoes={/psic|terap/i.test(txt(cliente.profissao)) ? SUGESTOES : []}
         podeCriar={PRODUCAO_ATIVA && ativa && saldo > 0 && perfilPronto}
         motivo={!perfilPronto ? (pedeRegistro(txt(cliente.profissao)) && txt(cliente.nome).trim() ? 'Preencha acima o seu CRP. O conselho pede nome e registro em todo conteúdo, e ele aparece no vídeo.' : 'Antes do 1º Reel, preencha acima seu nome e sua profissão. Eles aparecem no vídeo.') : !PRODUCAO_ATIVA ? 'Criação de Reels desligada durante a ativação. Nenhum crédito é descontado.' : ativa ? 'Seus créditos deste mês acabaram.' : (SEM_CRIAR[status] ?? 'Sua assinatura precisa estar ativa para criar Reels.')}
-        aoCriar={carregar}
-      />
+        aoCriar={async () => { await carregar(); setAba('reels'); window.scrollTo({ top: 0 }) }}
+      />}
 
-      <section className="cartao">
+      {aba === 'reels' && <section className="cartao">
         <h2>Seus Reels</h2>
         {reels.length === 0 ? (
-          <p className="aviso"><b>Pronta para o seu 1º Reel?</b> Escreva o tema ali em cima. Aqui só aparecem os Reels que você pedir.</p>
+          <>
+            <p className="aviso"><b>Pronta para o seu 1º Reel?</b> Aqui só aparecem os Reels que você pedir.</p>
+            <button className="botao" onClick={() => setAba('criar')}>Criar meu 1º Reel</button>
+          </>
         ) : (
           <ul className="lista">
             {reels.map((r) => (
@@ -172,9 +187,9 @@ export default function Painel({ email }: { email: string }) {
             ))}
           </ul>
         )}
-      </section>
+      </section>}
 
-      {perfilPronto && <Perfil cliente={cliente} aoSalvar={carregar} />}
+      {aba === 'criar' && perfilPronto && <Perfil cliente={cliente} aoSalvar={carregar} />}
 
       <section className="cartao">
         <h2>Precisa de ajuda?</h2>
@@ -191,6 +206,14 @@ export default function Painel({ email }: { email: string }) {
           <p className="pequeno">A compra de créditos extras está em ativação. Se precisar antes, fale com o suporte.</p>
         )}
       </section>
+      <nav className="abas" aria-label="Seções">
+        <button className={aba === 'criar' ? 'aba ativa' : 'aba'} onClick={() => { setAba('criar'); window.scrollTo({ top: 0 }) }}>
+          Criar
+        </button>
+        <button className={aba === 'reels' ? 'aba ativa' : 'aba'} onClick={() => { setAba('reels'); window.scrollTo({ top: 0 }) }}>
+          Meus Reels{paraRevisar > 0 && <span className="bolinha">{paraRevisar}</span>}
+        </button>
+      </nav>
     </>
   )
 }
@@ -251,6 +274,14 @@ function ItemReel({ r, aoMudar }: { r: Reel; aoMudar: () => Promise<void> }) {
         </span>
       </div>
 
+      {r.status !== 'erro' && (
+        <ol className="passos" aria-label="Andamento">
+          {['Pedido', 'Produção', 'Revisão', 'Pronto'].map((nome, i) => {
+            const etapa = r.aprovado ? 3 : pronto ? 2 : r.status === 'produzindo' ? 1 : 0
+            return <li key={nome} className={i < etapa || (i === 3 && etapa === 3) ? 'feito' : i === etapa ? 'atual' : ''}>{nome}</li>
+          })}
+        </ol>
+      )}
       {r.status === 'erro' && (
         <p className="pequeno">Não conseguimos gerar este Reel. O crédito voltou para o seu saldo.</p>
       )}
@@ -363,7 +394,7 @@ function ItemReel({ r, aoMudar }: { r: Reel; aoMudar: () => Promise<void> }) {
   )
 }
 
-function NovoReel({ podeCriar, motivo, aoCriar }: { podeCriar: boolean; motivo: string; aoCriar: () => Promise<void> }) {
+function NovoReel({ podeCriar, motivo, aoCriar, sugestoes }: { podeCriar: boolean; motivo: string; aoCriar: () => Promise<void>; sugestoes: string[] }) {
   const [tema, setTema] = useState('')
   const [tom, setTom] = useState(TONS[0])
   const [objetivo, setObjetivo] = useState(OBJETIVOS[0])
@@ -411,6 +442,18 @@ function NovoReel({ podeCriar, motivo, aoCriar }: { podeCriar: boolean; motivo: 
           onChange={(e) => { setTema(e.target.value); setMsg(''); setConfirmar(false) }}
         />
         <p className="pequeno contador">{tema.length}/{TEMA_MAX}</p>
+        {sugestoes.length > 0 && !tema.trim() && (
+          <>
+            <p className="pequeno">Sem ideia? Toque em uma e mude como quiser:</p>
+            <div className="chips">
+              {sugestoes.map((sg) => (
+                <button type="button" key={sg} className="chip ideia" onClick={() => { setTema(sg); setMsg(''); setConfirmar(false) }}>
+                  {sg}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
         <p className="rotulo-campo" id="rot-objetivo">Objetivo do conteúdo</p>
         <div className="chips" role="radiogroup" aria-labelledby="rot-objetivo">
           {OBJETIVOS.map((o) => (

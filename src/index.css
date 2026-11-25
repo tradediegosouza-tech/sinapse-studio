@@ -79,3 +79,15 @@ a.botao { color: #fff; }
 .confirmar { margin-top: 14px; padding: 14px; border: 1px solid var(--roxo); border-radius: 14px; background: var(--espera-fundo); }
 .confirmar p { margin: 6px 0; }
 .assinatura { margin-top: 6px; }
+
+.chip.ideia { font-size: 0.85rem; text-align: left; border-style: dashed; color: var(--suave); }
+.passos { list-style: none; display: flex; gap: 6px; margin: 12px 0 0; padding: 0; }
+.passos li { flex: 1; display: block; padding: 6px 0 0; border: 0; border-top: 4px solid var(--borda); font-size: 0.72rem; color: var(--suave); text-align: center; }
+.lista .passos li { display: block; padding: 6px 0 0; border-top: 4px solid var(--borda); }
+.lista .passos li.feito { border-top-color: var(--ok); color: var(--ok); }
+.lista .passos li.atual { border-top-color: var(--roxo); color: var(--roxo); font-weight: 700; }
+.abas { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; background: var(--cartao); border-top: 1px solid var(--borda); padding-bottom: env(safe-area-inset-bottom); }
+.aba { flex: 1; padding: 14px 8px; border: 0; background: transparent; color: var(--suave); font: inherit; font-weight: 600; cursor: pointer; border-top: 3px solid transparent; }
+.aba.ativa { color: var(--roxo); border-top-color: var(--roxo); }
+.bolinha { display: inline-block; min-width: 20px; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--roxo); color: #fff; font-size: 0.75rem; }
+body { padding-bottom: 72px; }
