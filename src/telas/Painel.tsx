@@ -453,8 +453,9 @@ function NovoReel({ podeCriar, motivo, aoCriar }: { podeCriar: boolean; motivo: 
   )
 }
 
+// Só psicóloga formada precisa de CRP (regra do CFP). Terapeuta, coach, estudante etc. ficam livres.
 function pedeRegistro(profissao: string) {
-  return /psic[oó]log/i.test(profissao)
+  return /psic[oó]log/i.test(profissao) && !/estudante|acad[eê]mic|graduand|est[aá]gi/i.test(profissao)
 }
 
 function Perfil({ cliente, aoSalvar, primeiroAcesso = false }: { cliente: Linha; aoSalvar: () => Promise<void>; primeiroAcesso?: boolean }) {
